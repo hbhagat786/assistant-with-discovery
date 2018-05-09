@@ -27,6 +27,9 @@ public class Constants {
   /** The Constant CONVERSATION_URL. */
   public static final String CONVERSATION_URL = "https://gateway.watsonplatform.net/conversation/api";
 
+  
+  public static final String TICKET_URL = "https://www.alphavantage.co/query?function=BATCH_STOCK_QUOTES&symbols=TICKER&apikey=B0INUGTOO0Z2CQY2";
+  
   /** The Constant CONVERSATION_VERSION. */
   public static final String CONVERSATION_VERSION = "2017-05-26";
 

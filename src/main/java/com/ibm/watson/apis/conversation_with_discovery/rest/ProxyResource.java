@@ -17,7 +17,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -31,6 +34,8 @@ import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import com.google.gson.Gson;
 import com.ibm.watson.apis.conversation_with_discovery.discovery.DiscoveryClient;
@@ -42,6 +47,7 @@ import com.ibm.watson.developer_cloud.conversation.v1.model.Context;
 import com.ibm.watson.developer_cloud.conversation.v1.model.InputData;
 import com.ibm.watson.developer_cloud.conversation.v1.model.MessageOptions;
 import com.ibm.watson.developer_cloud.conversation.v1.model.MessageResponse;
+import com.ibm.watson.developer_cloud.conversation.v1.model.OutputData;
 import com.ibm.watson.developer_cloud.service.exception.UnauthorizedException;
 import com.ibm.watson.developer_cloud.util.GsonSingleton;
 
@@ -133,7 +139,58 @@ public class ProxyResource {
     // user's question or if we
     // should call the discovery service to obtain better answers
 
-    if (response.getOutput().containsKey("action")
+    if(response.getOutput().containsKey("action")
+    && (response.getOutput().get("action").toString().indexOf("call_stock_api") != -1)) {
+        String tickerCode = response.getContext().get("stock_ticker").toString();
+        String tickerDate = response.getContext().get("date").toString();
+        URL url = new URL(Constants.TICKET_URL.replaceAll("TICKER", tickerCode));
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		conn.setRequestMethod("GET");
+		conn.setRequestProperty("Accept", "application/json");
+
+		if (conn.getResponseCode() != 200) {
+			throw new RuntimeException("Failed : HTTP error code : "
+					+ conn.getResponseCode());
+		}
+
+		BufferedReader br = new BufferedReader(new InputStreamReader(
+			(conn.getInputStream())));
+
+        String responseJson = new String();
+		String output;
+		System.out.println("Output from Server .... \n");
+		while ((output = br.readLine()) != null) {
+            responseJson = responseJson + output + "\n";
+			System.out.println(output);
+		}
+		conn.disconnect();
+
+
+        org.json.JSONTokener tokener = new JSONTokener(responseJson);
+        String stockPrice = null;
+        try{
+            Object obj = new JSONObject(tokener);
+            org.json.JSONObject jsonObj = (org.json.JSONObject) obj;
+               
+            org.json.JSONArray jsonArr = (org.json.JSONArray) jsonObj.get("Stock Quotes");
+            org.json.JSONObject jsonObj2 = (org.json.JSONObject) jsonArr.get(0);
+            stockPrice= "Stock price of "+ tickerCode + " $" +jsonObj2.get("2. price").toString() + " on " + tickerDate;
+            response.put("StockPrice", stockPrice);
+         }catch(Exception pe){
+             pe.printStackTrace();
+         }
+		
+        OutputData outputData = new OutputData();
+		List<String> list = new ArrayList<String>();
+		list.add(stockPrice);
+		outputData.setText(list);
+		response.setOutput(outputData);
+		
+		
+		
+		
+
+    } else if (response.getOutput().containsKey("action")
         && (response.getOutput().get("action").toString().indexOf("call_discovery") != -1)) {
       String query = response.getInput().getText();
 

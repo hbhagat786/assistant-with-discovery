@@ -1,7 +1,7 @@
 ---
 applications:
 - services:
-  - my-discovery-service
-  - my-assistant-service
+  - R2D2-assistant
+  - R2D2-discovery
   path: build/libs/watson-assistant-with-discovery-0.1-SNAPSHOT.war
   memory: 512M
